@@ -50,22 +50,20 @@ func (e *ECSClusterServiceDeployer) GetServiceTaskDefinition() (*ecs.TaskDefinit
 }
 
 func copyContainerDef(source *ecs.ContainerDefinition) (dest *ecs.ContainerDefinition) {
-	//newImage := *source.Image
 	dest = &ecs.ContainerDefinition{
-		Command:               source.Command,
-		Cpu:                   source.Cpu,
-		DisableNetworking:     source.DisableNetworking,
-		DnsSearchDomains:      source.DnsSearchDomains,
-		DnsServers:            source.DnsServers,
-		DockerLabels:          source.DockerLabels,
-		DockerSecurityOptions: source.DockerSecurityOptions,
-		EntryPoint:            source.EntryPoint,
-		Environment:           source.Environment,
-		Essential:             source.Essential,
-		ExtraHosts:            source.ExtraHosts,
-		HealthCheck:           source.HealthCheck,
-		Hostname:              source.Hostname,
-		//Image:                  &newImage,
+		Command:                source.Command,
+		Cpu:                    source.Cpu,
+		DisableNetworking:      source.DisableNetworking,
+		DnsSearchDomains:       source.DnsSearchDomains,
+		DnsServers:             source.DnsServers,
+		DockerLabels:           source.DockerLabels,
+		DockerSecurityOptions:  source.DockerSecurityOptions,
+		EntryPoint:             source.EntryPoint,
+		Environment:            source.Environment,
+		Essential:              source.Essential,
+		ExtraHosts:             source.ExtraHosts,
+		HealthCheck:            source.HealthCheck,
+		Hostname:               source.Hostname,
 		Image:                  source.Image,
 		Interactive:            source.Interactive,
 		Links:                  source.Links,
@@ -96,36 +94,15 @@ func (e *ECSClusterServiceDeployer) RegisterUpdatedTaskDefinition(taskDefinition
 	for containerName := range containerMap {
 		for idx, containerDefinition := range taskDefinition.ContainerDefinitions {
 			newContainerDefs[idx] = copyContainerDef(containerDefinition)
-			//newContainerDefs[idx] = containerDefinition
-			fmt.Println("before")
-			fmt.Println("=================")
-			fmt.Println("Original")
-			fmt.Println(containerDefinition.Image)
-			fmt.Println(&containerDefinition.Image)
-			fmt.Println("New")
-			fmt.Println(newContainerDefs[idx].Image)
-			fmt.Println(&newContainerDefs[idx].Image)
 			if containerName == *containerDefinition.Name {
-				fmt.Println("fuck")
+				// todo, copy foward the container name
+				fmt.Printf("Found container %s", containerName)
 				icanteven := containerMap[containerName]["image"]
 				fmt.Println(&icanteven)
 				newContainerDefs[idx].Image = &icanteven
-				//*newContainerDefs[idx].Image = containerMap[containerName]["image"]
-				//*taskDefinition.ContainerDefinitions[idx].Image = containerMap[containerName]["image"]
 			}
-			fmt.Println("after")
-			fmt.Println("=================")
-			fmt.Println("Original")
-			fmt.Println(containerDefinition.Image)
-			fmt.Println(&containerDefinition.Image)
-			fmt.Println("New")
-			fmt.Println(newContainerDefs[idx].Image)
-			fmt.Println(&newContainerDefs[idx].Image)
-			fmt.Println("=================")
 		}
 	}
-	//	fmt.Println(taskDefinition.ContainerDefinitions)
-	//	fmt.Println(newContainerDefs)
 	input := &ecs.RegisterTaskDefinitionInput{
 		ContainerDefinitions:    newContainerDefs,
 		Cpu:                     taskDefinition.Cpu,
