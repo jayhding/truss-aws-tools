@@ -10,7 +10,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/ecs/ecsiface"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
-	// "go.uber.org/zap"
+	"go.uber.org/zap"
 )
 
 ////////////////////
@@ -40,34 +40,111 @@ func (m *ecsMock) DescribeTaskDefinition(input *ecs.DescribeTaskDefinitionInput)
 ////////////////////
 // Testing Func UpdateService
 ////////////////////
-// func TestUpdateGetServiceTaskDefinition(t *testing.T) {
-// 	ecsMockClient := new(ecsMock)
-// 	e := ECSClusterServiceDeployer{
-// 		ECSCluster: "mycluster",
-// 		ECSService: "myservice",
-// 		ECSClient:  ecsMockClient,
-// 	}
 
-// 	ecsMockClient.On("DescribeServices", mock.Anything).Return(nil, errors.New("poof AWS died"))
-
-// 	e.GetServiceTaskDefinition()
-
-// }
-
-func TestUpdateGetServiceTaskDefinitionServicesFailed(t *testing.T) {
+// TestGetServiceTaskDefinition testing normal operation
+func TestGetServiceTaskDefinition(t *testing.T) {
+	var logger *zap.Logger // not for sure what to do about zap
+	logger, _ = zap.NewDevelopment()
 	ecsMockClient := new(ecsMock)
 	e := ECSClusterServiceDeployer{
+		Logger:     logger,
 		ECSCluster: "mycluster",
 		ECSService: "myservice",
 		ECSClient:  ecsMockClient,
 	}
 
-	ecsMockClient.On("DescribeServices", mock.Anything).Return(nil, errors.New("poof AWS died"))
+	taskDef := "thisismytaskdef"
+	serviceOutput := ecs.DescribeServicesOutput{
+		Services: []*ecs.Service{
+			&ecs.Service{
+				TaskDefinition: &taskDef,
+			}},
+	}
+
+	taskDefOutput := ecs.DescribeTaskDefinitionOutput{
+		TaskDefinition: &ecs.TaskDefinition{
+			TaskDefinitionArn: &taskDef,
+		},
+	}
+
+	ecsMockClient.On("DescribeServices", mock.Anything).Once().Return(&serviceOutput, nil)
+	ecsMockClient.On("DescribeTaskDefinition", mock.Anything).Once().Return(&taskDefOutput, nil)
 
 	resp, err := e.GetServiceTaskDefinition()
-	assert.Equal(t, resp, nil)
-	assert.Error(t, err)
+	assert.Equal(t, resp.TaskDefinitionArn, &taskDef)
+	assert.Nil(t, err)
+}
 
+// TestGetServiceTaskDefinitionServicesFailed test when the DescribeServices call fails
+func TestGetServiceTaskDefinitionServicesFailed(t *testing.T) {
+	var logger *zap.Logger // not for sure what to do about zap
+	logger, _ = zap.NewDevelopment()
+	ecsMockClient := new(ecsMock)
+	e := ECSClusterServiceDeployer{
+		Logger:     logger,
+		ECSCluster: "mycluster",
+		ECSService: "myservice",
+		ECSClient:  ecsMockClient,
+	}
+
+	output := ecs.DescribeServicesOutput{}
+	ecsMockClient.On("DescribeServices", mock.Anything).Once().Return(&output, errors.New("poof AWS died"))
+
+	_, err := e.GetServiceTaskDefinition()
+	assert.Error(t, err)
+}
+
+// TestGetServiceTaskDefinitionNoMatchingServices test when service serach return no matching services
+func TestGetServiceTaskDefinitionNoMatchingServices(t *testing.T) {
+	var logger *zap.Logger // not for sure what to do about zap
+	logger, _ = zap.NewDevelopment()
+	ecsMockClient := new(ecsMock)
+	e := ECSClusterServiceDeployer{
+		Logger:     logger,
+		ECSCluster: "mycluster",
+		ECSService: "myservice",
+		ECSClient:  ecsMockClient,
+	}
+
+	output := ecs.DescribeServicesOutput{
+		Services: make([]*ecs.Service, 0),
+	}
+	ecsMockClient.On("DescribeServices", mock.Anything).Once().Return(&output, nil)
+
+	_, err := e.GetServiceTaskDefinition()
+	assert.Error(t, err)
+}
+
+func TestGetServiceTaskDefinitionDescribeTaskFails(t *testing.T) {
+	var logger *zap.Logger // not for sure what to do about zap
+	logger, _ = zap.NewDevelopment()
+	ecsMockClient := new(ecsMock)
+	e := ECSClusterServiceDeployer{
+		Logger:     logger,
+		ECSCluster: "mycluster",
+		ECSService: "myservice",
+		ECSClient:  ecsMockClient,
+	}
+
+	taskDef := "thisismytaskdef"
+	serviceOutput := ecs.DescribeServicesOutput{
+		Services: []*ecs.Service{
+			&ecs.Service{
+				TaskDefinition: &taskDef,
+			}},
+	}
+
+	taskDefOutput := ecs.DescribeTaskDefinitionOutput{
+		TaskDefinition: &ecs.TaskDefinition{
+			TaskDefinitionArn: &taskDef,
+		},
+	}
+
+	ecsMockClient.On("DescribeServices", mock.Anything).Once().Return(&serviceOutput, nil)
+	ecsMockClient.On("DescribeTaskDefinition", mock.Anything).Once().Return(&taskDefOutput, errors.New("aws failed"))
+
+	_, err := e.GetServiceTaskDefinition()
+	assert.Error(t, err)
 }
 
 ////////////////////
@@ -76,8 +153,11 @@ func TestUpdateGetServiceTaskDefinitionServicesFailed(t *testing.T) {
 
 // TestUpdateService tests the case where the ECS API are a success
 func TestUpdateService(t *testing.T) {
+	var logger *zap.Logger
+	logger, _ = zap.NewProduction()
 	ecsMockClient := new(ecsMock)
 	e := ECSClusterServiceDeployer{
+		Logger:     logger,
 		ECSCluster: "mycluster",
 		ECSService: "myservice",
 		ECSClient:  ecsMockClient,
@@ -98,8 +178,11 @@ func TestUpdateService(t *testing.T) {
 
 // TestUpdateServiceError tests the case where the ECS API call throws an error
 func TestUpdateServiceError(t *testing.T) {
+	var logger *zap.Logger
+	logger, _ = zap.NewProduction()
 	ecsMockClient := new(ecsMock)
 	e := ECSClusterServiceDeployer{
+		Logger:     logger,
 		ECSCluster: "mycluster",
 		ECSService: "myservice",
 		ECSClient:  ecsMockClient,
